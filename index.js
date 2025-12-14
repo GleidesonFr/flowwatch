@@ -4,6 +4,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const Redis = require('ioredis');
 
+const { initWebSocket, broadcast } = require('./websocket');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -14,6 +16,8 @@ app.use(express.json());
 const redis = new Redis();
 
 const LOCK_PREFIX = 'flowwatch:lock:';
+
+initWebSocket(server);
 
 async function setLock(filePath, user, ttl = 5 * 60 * 1000) { 
     const key = LOCK_PREFIX + filePath;
@@ -63,6 +67,13 @@ app.post("/lock", async (req, res) => {
 
     if(ok){
         io.emit('lock', { path, user });
+        broadcast({
+            type: "lock",
+            path: path,
+            user: user,
+            timestamp: Date.now()
+        });
+
         return res.json(
             {
                 success: true,
@@ -100,6 +111,14 @@ app.post('/unlock', async (req, res) =>{
 
    if(ok){
     io.emit('unlock', { path, user });
+
+    broadcast({
+        type: "unlock",
+        path: path,
+        user: user,
+        timestamp: Date.now()
+    });
+
     return res.json({
         success: true,
         data: {
