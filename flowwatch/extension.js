@@ -52,10 +52,13 @@ function activate(context) {
 			editor.setDecorations(lockDecoration, []);
 		} catch (error) {
 			isLockedByAnotherUser = true;
-			statusBar.text = "Lock by another user";
+			console.error("Erro ao bloquear o arquivo:", error);
+			const user = error.response.data.lockedBy || "outro desenvolvedor";
+			const date = error.response.data.timestamp ? `(há ${formatTime(error.response.data.timestamp)})` : "";
+			statusBar.text = `Em uso por ${user}${date}`;
 			editor.setDecorations(lockDecoration, [new vscode.Range(editor.document.positionAt(0),
 			editor.document.positionAt(editor.document.getText().length))]);
-			vscode.window.showWarningMessage("Arquivo já está bloqueado por outro desenvolvedor");
+			vscode.window.showWarningMessage(`O arquivo está sendo usado por ${user}${date}. Edição não permitida.`);
 		}
 	});
 
@@ -76,6 +79,20 @@ function activate(context) {
 	});
 
 	context.subscriptions.push(statusBar);
+}
+
+function formatTime(timestamp) {
+	const diff = Date.now() - timestamp;
+	const minutes = Math.floor(diff / 60000);
+
+	if(minutes < 1){
+		return "agora";
+	}
+
+	if(minutes === 1){
+		return "1 min";
+	}
+	return `${minutes} min`;
 }
 
 async function deactivate() {

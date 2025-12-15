@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const Redis = require('ioredis');
 
 const { initWebSocket, broadcast } = require('./websocket');
+const { time } = require('console');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,7 +24,7 @@ async function setLock(filePath, user, ttl = 5 * 60 * 1000) {
     const key = LOCK_PREFIX + filePath;
     const value = JSON.stringify({ user, ts: Date.now() });
 
-    //usa PX TTLÇ em ms e NX para only-if-not-exists
+    //usa PX TTL em ms e NX para only-if-not-exists
     const res = await redis.set(key, value, 'PX', ttl, 'NX');
     return res === 'OK';
 }
@@ -81,7 +82,8 @@ app.post("/lock", async (req, res) => {
                     path: path,
                     locked_by: user
                 },
-                error: null
+                error: null,
+                timestamp: Date.now()
             }
         );
     }else{
@@ -93,9 +95,10 @@ app.post("/lock", async (req, res) => {
                 code: "FILE_LOCKED",
                 message: "O arquivo está sendo usado por outro usuário",
                 details: {
-                    locked_by: current.user
+                    lockedBy: current.user
                 }
-            }
+            },
+            timestamp: current.ts
         });
     }
 });

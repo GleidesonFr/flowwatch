@@ -13,10 +13,21 @@ function getConfig(){
 async function lockFile(filePath){
     const { serverUrl, user } = getConfig();
 
-    return axios.post(`${serverUrl}/lock`, {
-        path: filePath,
-        user: user
-    });
+    try {
+        const response = await axios.post(`${serverUrl}/lock`, {
+            path: filePath,
+            user: user
+        });     
+        
+        return response.data;
+    } catch (error) {
+        if(error.response && error.response.status === 409){
+            throw{
+                data: error.response.data
+            };
+        }
+        throw error;
+    }
 }
 
 async function unlockFile(filePath){
